@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -120,6 +120,31 @@ export default function Dashboard() {
     });
   };
 
+  const [clipboardDetected, setClipboardDetected] = useState(false);
+
+  const checkClipboard = useCallback(async () => {
+    if (!navigator.clipboard?.readText) return;
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      const currentUrl = form.getValues("url");
+      if (currentUrl) return; // don't overwrite user's input
+      if (/^https?:\/\/.+/.test(text)) {
+        form.setValue("url", text, { shouldValidate: true });
+        setClipboardDetected(true);
+        setTimeout(() => setClipboardDetected(false), 3000);
+      }
+    } catch {
+      // Clipboard permission denied — silently ignore
+    }
+  }, [form]);
+
+  useEffect(() => {
+    checkClipboard();
+    const onFocus = () => checkClipboard();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [checkClipboard]);
+
   const queue = [...activeDownloads, ...pendingDownloads];
 
   const formats = [
@@ -147,6 +172,11 @@ export default function Dashboard() {
                     {...field} 
                   />
                 </FormControl>
+                {clipboardDetected && (
+                  <p className="text-xs text-primary font-medium px-1">
+                    URL detected from clipboard
+                  </p>
+                )}
                 <FormMessage />
               </FormItem>
             )}
