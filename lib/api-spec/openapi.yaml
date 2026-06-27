@@ -3,13 +3,17 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Self-hosted media downloader API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: downloads
+    description: Download job operations
+  - name: queue
+    description: Queue and stats operations
 paths:
   /healthz:
     get:
@@ -24,6 +28,155 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /downloads:
+    get:
+      operationId: listDownloads
+      tags: [downloads]
+      summary: List all downloads
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, downloading, completed, failed]
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of download jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Download"
+    post:
+      operationId: createDownload
+      tags: [downloads]
+      summary: Create a new download job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DownloadInput"
+      responses:
+        "201":
+          description: Download job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Download"
+        "400":
+          description: Invalid request
+
+  /downloads/{id}:
+    get:
+      operationId: getDownload
+      tags: [downloads]
+      summary: Get a download job by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Download job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Download"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteDownload
+      tags: [downloads]
+      summary: Delete a download job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /downloads/{id}/retry:
+    post:
+      operationId: retryDownload
+      tags: [downloads]
+      summary: Retry a failed download
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Retried download job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Download"
+        "404":
+          description: Not found
+
+  /downloads/{id}/file:
+    get:
+      operationId: downloadFile
+      tags: [downloads]
+      summary: Download the completed file
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: File stream
+        "404":
+          description: Not found or not completed
+
+  /stats:
+    get:
+      operationId: getStats
+      tags: [queue]
+      summary: Get download queue statistics
+      responses:
+        "200":
+          description: Queue stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+
+  /recent:
+    get:
+      operationId: getRecent
+      tags: [queue]
+      summary: Get recently completed downloads
+      responses:
+        "200":
+          description: Recent downloads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Download"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +187,81 @@ components:
       required:
         - status
 
+    Download:
+      type: object
+      required:
+        - id
+        - url
+        - title
+        - status
+        - format
+        - createdAt
+      properties:
+        id:
+          type: integer
+        url:
+          type: string
+        title:
+          type: ["string", "null"]
+        thumbnail:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, downloading, completed, failed]
+        format:
+          type: string
+          enum: [mp4, mp3, webm, best]
+        quality:
+          type: ["string", "null"]
+        fileSize:
+          type: ["integer", "null"]
+        filePath:
+          type: ["string", "null"]
+        errorMessage:
+          type: ["string", "null"]
+        progress:
+          type: ["number", "null"]
+        duration:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: ["string", "null"]
+
+    DownloadInput:
+      type: object
+      required:
+        - url
+        - format
+      properties:
+        url:
+          type: string
+          minLength: 1
+        format:
+          type: string
+          enum: [mp4, mp3, webm, best]
+        quality:
+          type: string
+
+    Stats:
+      type: object
+      required:
+        - total
+        - pending
+        - downloading
+        - completed
+        - failed
+        - totalSizeBytes
+      properties:
+        total:
+          type: integer
+        pending:
+          type: integer
+        downloading:
+          type: integer
+        completed:
+          type: integer
+        failed:
+          type: integer
+        totalSizeBytes:
+          type: integer

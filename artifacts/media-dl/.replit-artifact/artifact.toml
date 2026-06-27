@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "MediaDL"
+version = "1.0.0"
+id = "artifacts/media-dl"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19001
+
+[services.development]
+run = "pnpm --filter @workspace/media-dl run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/media-dl", "run", "build" ]
+publicDir = "artifacts/media-dl/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19001"
+BASE_PATH = "/"
