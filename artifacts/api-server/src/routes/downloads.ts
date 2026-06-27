@@ -135,6 +135,25 @@ router.post("/downloads", async (req, res): Promise<void> => {
   res.status(201).json(download);
 });
 
+// DELETE /downloads/completed — bulk clear all completed downloads
+router.delete("/downloads/completed", async (req, res): Promise<void> => {
+  const completed = await db.select().from(downloadsTable).where(eq(downloadsTable.status, "completed"));
+
+  let deleted = 0;
+  for (const dl of completed) {
+    if (dl.filePath && fs.existsSync(dl.filePath)) {
+      try { fs.unlinkSync(dl.filePath); } catch (e) {
+        logger.warn({ id: dl.id, err: e }, "Could not delete file during bulk clear");
+      }
+    }
+    await db.delete(downloadsTable).where(eq(downloadsTable.id, dl.id));
+    deleted++;
+  }
+
+  req.log.info({ deleted }, "Bulk cleared completed downloads");
+  res.json({ deleted });
+});
+
 // GET /downloads/:id
 router.get("/downloads/:id", async (req, res): Promise<void> => {
   const params = GetDownloadParams.safeParse(req.params);

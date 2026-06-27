@@ -111,6 +111,19 @@ paths:
         "404":
           description: Not found
 
+  /downloads/completed:
+    delete:
+      operationId: clearCompleted
+      tags: [downloads]
+      summary: Delete all completed downloads and their files
+      responses:
+        "200":
+          description: Number of deleted downloads
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClearCompletedResponse"
+
   /downloads/{id}/retry:
     post:
       operationId: retryDownload
@@ -242,6 +255,14 @@ components:
           enum: [mp4, mp3, webm, best]
         quality:
           type: string
+
+    ClearCompletedResponse:
+      type: object
+      required:
+        - deleted
+      properties:
+        deleted:
+          type: integer
 
     Stats:
       type: object

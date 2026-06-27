@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ClearCompletedResponse,
   Download,
   DownloadInput,
   HealthStatus,
@@ -431,6 +432,76 @@ export const useDeleteDownload = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteDownloadMutationOptions(options));
+    }
+
+export const getClearCompletedUrl = () => {
+
+
+
+
+  return `/api/downloads/completed`
+}
+
+/**
+ * @summary Delete all completed downloads and their files
+ */
+export const clearCompleted = async ( options?: RequestInit): Promise<ClearCompletedResponse> => {
+
+  return customFetch<ClearCompletedResponse>(getClearCompletedUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getClearCompletedMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof clearCompleted>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof clearCompleted>>, TError,void, TContext> => {
+
+const mutationKey = ['clearCompleted'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof clearCompleted>>, void> = () => {
+
+
+          return  clearCompleted(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ClearCompletedMutationResult = NonNullable<Awaited<ReturnType<typeof clearCompleted>>>
+
+    export type ClearCompletedMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete all completed downloads and their files
+ */
+export const useClearCompleted = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof clearCompleted>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof clearCompleted>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getClearCompletedMutationOptions(options));
     }
 
 export const getRetryDownloadUrl = (id: number,) => {

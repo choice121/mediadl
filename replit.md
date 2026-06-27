@@ -34,7 +34,7 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- **Always push to GitHub after every change.** Use `git push "https://choice121:$GITHUB_TOKEN@github.com/choice121/mediadl.git" HEAD:main` after every task completes.
 
 ## Gotchas
 

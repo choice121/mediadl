@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './clearCompletedResponse';
 export * from './download';
 export * from './downloadFormat';
 export * from './downloadInput';

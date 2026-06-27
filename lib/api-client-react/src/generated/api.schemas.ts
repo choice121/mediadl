@@ -72,6 +72,10 @@ export interface DownloadInput {
   quality?: string;
 }
 
+export interface ClearCompletedResponse {
+  deleted: number;
+}
+
 export interface Stats {
   total: number;
   pending: number;

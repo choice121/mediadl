@@ -110,6 +110,14 @@ export const DeleteDownloadResponse = zod.void()
 
 
 /**
+ * @summary Delete all completed downloads and their files
+ */
+export const ClearCompletedResponse = zod.object({
+  "deleted": zod.number()
+})
+
+
+/**
  * @summary Retry a failed download
  */
 export const RetryDownloadParams = zod.object({
