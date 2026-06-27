@@ -225,8 +225,15 @@ router.get("/downloads/:id/file", async (req, res): Promise<void> => {
     return;
   }
 
-  const filename = path.basename(download.filePath);
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  const rawFilename = path.basename(download.filePath);
+  // Strip characters that are illegal in HTTP header quoted-strings
+  const safeFilename = rawFilename.replace(/[^\x20-\x7E]/g, "_").replace(/[\\"/]/g, "_");
+  // RFC 5987 encoded form preserves the full original name for browsers that support it
+  const encodedFilename = encodeURIComponent(rawFilename);
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="${safeFilename}"; filename*=UTF-8''${encodedFilename}`
+  );
   res.setHeader("Content-Type", "application/octet-stream");
 
   const fileSize = fs.statSync(download.filePath).size;
