@@ -5,6 +5,7 @@ import fs from "fs";
 import { db, downloadsTable } from "@workspace/db";
 import {
   CreateDownloadBody,
+  BatchCreateDownloadBody,
   GetDownloadParams,
   DeleteDownloadParams,
   RetryDownloadParams,
@@ -133,6 +134,33 @@ router.post("/downloads", async (req, res): Promise<void> => {
   });
 
   res.status(201).json(download);
+});
+
+// POST /downloads/batch
+router.post("/downloads/batch", async (req, res): Promise<void> => {
+  const parsed = BatchCreateDownloadBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const created = await Promise.all(
+    parsed.data.items.map(({ url, format, quality }) =>
+      db.insert(downloadsTable)
+        .values({ url, format, quality: quality ?? null, status: "pending", progress: 0 })
+        .returning()
+        .then(([row]) => row)
+    )
+  );
+
+  for (const dl of created) {
+    startDownloadJob(dl.id).catch((err) => {
+      logger.error({ id: dl.id, err }, "Unhandled error in batch download job");
+    });
+  }
+
+  req.log.info({ count: created.length }, "Batch download jobs created");
+  res.status(201).json(created);
 });
 
 // DELETE /downloads/completed — bulk clear all completed downloads

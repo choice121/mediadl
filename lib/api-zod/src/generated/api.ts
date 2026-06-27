@@ -153,6 +153,35 @@ export const DownloadFileResponse = zod.unknown()
 
 
 /**
+ * @summary Batch create download jobs
+ */
+export const BatchCreateDownloadBody = zod.object({
+  "items": zod.array(zod.object({
+    "url": zod.string().min(1),
+    "format": zod.enum(['mp4', 'mp3', 'webm', 'best']),
+    "quality": zod.string().optional()
+  })).min(1)
+})
+
+export const BatchCreateDownloadResponse = zod.array(zod.object({
+  "id": zod.number(),
+  "url": zod.string(),
+  "title": zod.string().nullable(),
+  "thumbnail": zod.string().nullish(),
+  "status": zod.enum(['pending', 'downloading', 'completed', 'failed']),
+  "format": zod.enum(['mp4', 'mp3', 'webm', 'best']),
+  "quality": zod.string().nullish(),
+  "fileSize": zod.number().nullish(),
+  "filePath": zod.string().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "progress": zod.number().nullish(),
+  "duration": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
+}))
+
+
+/**
  * @summary Get download queue statistics
  */
 export const GetStatsResponse = zod.object({

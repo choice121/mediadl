@@ -434,6 +434,46 @@ export const useDeleteDownload = <TError = ErrorType<void>,
       return useMutation(getDeleteDownloadMutationOptions(options));
     }
 
+export const getBatchCreateDownloadsUrl = () => {
+  return `/api/downloads/batch`
+}
+
+export const batchCreateDownloads = async (body: { items: Array<{ url: string; format: 'mp4' | 'mp3' | 'webm' | 'best'; quality?: string }> }, options?: RequestInit): Promise<Download[]> => {
+  return customFetch<Download[]>(getBatchCreateDownloadsUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(body)
+  });
+}
+
+export const getBatchCreateDownloadsMutationOptions = <TError = ErrorType<void>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof batchCreateDownloads>>, TError, { data: { items: Array<{ url: string; format: 'mp4' | 'mp3' | 'webm' | 'best'; quality?: string }> } }, TContext>, request?: SecondParameter<typeof customFetch> }
+): UseMutationOptions<Awaited<ReturnType<typeof batchCreateDownloads>>, TError, { data: { items: Array<{ url: string; format: 'mp4' | 'mp3' | 'webm' | 'best'; quality?: string }> } }, TContext> => {
+  const mutationKey = ['batchCreateDownloads'];
+  const { mutation: mutationOptions, request: requestOptions } = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof batchCreateDownloads>>, { data: { items: Array<{ url: string; format: 'mp4' | 'mp3' | 'webm' | 'best'; quality?: string }> } }> = (props) => {
+    const { data } = props ?? {};
+    return batchCreateDownloads(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+}
+
+export type BatchCreateDownloadsMutationResult = NonNullable<Awaited<ReturnType<typeof batchCreateDownloads>>>
+export type BatchCreateDownloadsMutationError = ErrorType<void>
+
+export const useBatchCreateDownloads = <TError = ErrorType<void>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof batchCreateDownloads>>, TError, { data: { items: Array<{ url: string; format: 'mp4' | 'mp3' | 'webm' | 'best'; quality?: string }> } }, TContext>, request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof batchCreateDownloads>>, TError, { data: { items: Array<{ url: string; format: 'mp4' | 'mp3' | 'webm' | 'best'; quality?: string }> } }, TContext> => {
+  return useMutation(getBatchCreateDownloadsMutationOptions(options));
+}
+
 export const getClearCompletedUrl = () => {
 
 
