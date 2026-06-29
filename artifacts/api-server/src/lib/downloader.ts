@@ -35,7 +35,8 @@ export function buildYtDlpArgs(url: string, format: string, quality: string | nu
   } else if (format === "webm") {
     args.push("-f", "bestvideo[ext=webm]+bestaudio[ext=webm]/best[ext=webm]/best");
   } else {
-    args.push("-f", "best");
+    // "best" format or unknown — use proper merge selector instead of deprecated "-f best"
+    args.push("-f", "bestvideo+bestaudio/best");
   }
 
   args.push(
