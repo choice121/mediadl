@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "YouTube Downloader"
+version = "1.0.0"
+id = "artifacts/ytdl"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18677
+
+[services.development]
+run = "pnpm --filter @workspace/ytdl run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ytdl", "run", "build" ]
+publicDir = "artifacts/ytdl/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18677"
+BASE_PATH = "/"

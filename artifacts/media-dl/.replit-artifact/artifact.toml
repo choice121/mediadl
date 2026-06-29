@@ -1,5 +1,5 @@
 kind = "web"
-previewPath = "/"
+previewPath = "/media-dl/"
 title = "MediaDL"
 version = "1.0.0"
 id = "artifacts/media-dl"
@@ -11,7 +11,7 @@ version = "1.0.0"
 
 [[services]]
 name = "web"
-paths = [ "/" ]
+paths = [ "/media-dl" ]
 localPort = 19001
 
 [services.development]
@@ -28,4 +28,4 @@ to = "/index.html"
 
 [services.env]
 PORT = "19001"
-BASE_PATH = "/"
+BASE_PATH = "/media-dl/"

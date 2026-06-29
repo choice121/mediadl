@@ -55,6 +55,7 @@ export function buildYtDlpArgs(url: string, format: string, quality: string | nu
 
 export function getYtDlpPath(): string {
   const candidates = [
+    "/home/runner/workspace/.pythonlibs/bin/yt-dlp",
     "yt-dlp",
     path.join(workspaceRoot, ".local/bin/yt-dlp"),
     "/home/runner/.local/bin/yt-dlp",
@@ -172,11 +173,24 @@ export async function runDownload(
         return;
       }
 
-      // Find the actual output file
+      // Find the actual output file (prefer video/audio over thumbnail jpg)
       let finalPath = lastFilePath;
+      // If the last captured path is a thumbnail jpg, look for the actual media file
+      if (finalPath && finalPath.endsWith('.jpg')) {
+        const baseName = finalPath.replace(/\.jpg$/, '');
+        const videoExts = ['.mp4', '.webm', '.mkv', '.m4a', '.mp3', '.opus'];
+        for (const ext of videoExts) {
+          if (fs.existsSync(baseName + ext)) {
+            finalPath = baseName + ext;
+            break;
+          }
+        }
+      }
       if (!finalPath || !fs.existsSync(finalPath)) {
-        // Search downloads dir for file matching id_
-        const files = fs.readdirSync(downloadsDir).filter(f => f.startsWith(`${id}_`));
+        // Search downloads dir for file matching id_, prefer non-jpg
+        const allFiles = fs.readdirSync(downloadsDir).filter(f => f.startsWith(`${id}_`));
+        const mediaFiles = allFiles.filter(f => !f.endsWith('.jpg') && !f.endsWith('.png') && !f.endsWith('.webp'));
+        const files = mediaFiles.length > 0 ? mediaFiles : allFiles;
         if (files.length > 0) {
           finalPath = path.join(downloadsDir, files[0]);
         }
