@@ -13,6 +13,30 @@ if (!fs.existsSync(downloadsDir)) {
   fs.mkdirSync(downloadsDir, { recursive: true });
 }
 
+/** Path where the user can store a cookies.txt file for yt-dlp */
+export function getCookiesPath(): string {
+  return path.resolve(workspaceRoot, "artifacts/api-server/cookies.txt");
+}
+
+/** Returns yt-dlp args to use cookies if a cookies.txt file is present */
+export function getCookiesArgs(): string[] {
+  const cookiesPath = getCookiesPath();
+  if (fs.existsSync(cookiesPath)) {
+    return ["--cookies", cookiesPath];
+  }
+  return [];
+}
+
+/** Returns yt-dlp args that improve reliability on server environments */
+function getReliabilityArgs(): string[] {
+  return [
+    "--js-runtimes", `nodejs:${process.execPath}`,
+    "--extractor-retries", "3",
+    "--retry-sleep", "linear=1::3",
+    "--no-check-certificates",
+  ];
+}
+
 export interface DownloadProgress {
   progress: number | null;
   fileSize: number | null;
@@ -30,11 +54,14 @@ export function buildYtDlpArgs(
 ): string[] {
   const args: string[] = [];
 
+  // Strip trailing "p" from quality values like "720p" → "720"
+  const heightVal = quality ? quality.replace(/p$/i, "") : null;
+
   if (format === "mp3") {
     args.push("-x", "--audio-format", "mp3");
   } else if (format === "mp4") {
-    if (quality && quality !== "best") {
-      args.push("-f", `bestvideo[height<=${quality}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${quality}]+bestaudio/best[height<=${quality}]/best`);
+    if (heightVal && heightVal !== "best") {
+      args.push("-f", `bestvideo[height<=${heightVal}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${heightVal}]+bestaudio/best[height<=${heightVal}]/best`);
     } else {
       args.push("-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best");
     }
@@ -51,6 +78,8 @@ export function buildYtDlpArgs(
   }
 
   args.push(
+    ...getCookiesArgs(),
+    ...getReliabilityArgs(),
     "--write-thumbnail",
     "--convert-thumbnails", "jpg",
     "--embed-thumbnail",
@@ -96,7 +125,6 @@ export function isChannelOrPlaylistUrl(url: string): boolean {
     url.includes("/@") ||
     url.includes("/channel/") ||
     url.includes("/user/") ||
-    // YouTube Music playlists, Bandcamp artist pages, SoundCloud sets, etc.
     (url.includes("list=") && !url.includes("watch?v="))
   );
 }
@@ -109,6 +137,8 @@ export async function enumeratePlaylistUrls(url: string): Promise<string[]> {
       "--flat-playlist",
       "--print", "webpage_url",
       "--no-warnings",
+      ...getCookiesArgs(),
+      ...getReliabilityArgs(),
       url,
     ]);
 
@@ -118,7 +148,7 @@ export async function enumeratePlaylistUrls(url: string): Promise<string[]> {
     proc.stderr.on("data", (d) => (stderr += d));
 
     proc.on("close", (code) => {
-      if (code !== 0) {
+      if (code !== 0 && !stdout.trim()) {
         logger.warn({ stderr, code }, "yt-dlp playlist enumeration failed");
         reject(new Error(stderr || `yt-dlp exited with code ${code}`));
         return;
@@ -138,6 +168,8 @@ export async function getMediaInfo(url: string): Promise<{ title: string; thumbn
     const proc = spawn(ytdlp, [
       "--dump-json",
       "--no-playlist",
+      ...getCookiesArgs(),
+      ...getReliabilityArgs(),
       url
     ]);
 

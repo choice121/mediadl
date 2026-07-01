@@ -519,6 +519,59 @@ components:
           items:
             $ref: "#/components/schemas/DownloadInput"
 
+    PreviewVideo:
+      type: object
+      required:
+        - url
+        - title
+      properties:
+        id:
+          type: ["string", "null"]
+        url:
+          type: string
+        title:
+          type: string
+        thumbnail:
+          type: ["string", "null"]
+        duration:
+          type: ["number", "null"]
+        uploader:
+          type: ["string", "null"]
+
+    PreviewResult:
+      type: object
+      required:
+        - videos
+        - isSingle
+        - total
+      properties:
+        videos:
+          type: array
+          items:
+            $ref: "#/components/schemas/PreviewVideo"
+        isSingle:
+          type: boolean
+        total:
+          type: integer
+
+    CookiesStatus:
+      type: object
+      required:
+        - set
+      properties:
+        set:
+          type: boolean
+        path:
+          type: ["string", "null"]
+
+    CookiesInput:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+
     ScheduleRunResponse:
       type: object
       required:

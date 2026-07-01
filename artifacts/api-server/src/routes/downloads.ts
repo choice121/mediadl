@@ -12,7 +12,7 @@ import {
   DownloadFileParams,
   ListDownloadsQueryParams,
 } from "@workspace/api-zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { logger } from "../lib/logger";
 import { runDownload, getMediaInfo, downloadsDir, enumeratePlaylistUrls, isChannelOrPlaylistUrl } from "../lib/downloader";
 
