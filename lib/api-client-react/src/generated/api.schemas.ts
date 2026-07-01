@@ -85,6 +85,82 @@ export interface Stats {
   totalSizeBytes: number;
 }
 
+export type ScheduleFormat = typeof ScheduleFormat[keyof typeof ScheduleFormat];
+
+
+export const ScheduleFormat = {
+  mp4: 'mp4',
+  mp3: 'mp3',
+  webm: 'webm',
+  best: 'best',
+} as const;
+
+export interface Schedule {
+  id: number;
+  label: string;
+  url: string;
+  format: ScheduleFormat;
+  /** @nullable */
+  quality?: string | null;
+  cronExpr: string;
+  enabled: boolean;
+  /** @nullable */
+  lastRunAt?: string | null;
+  /** @nullable */
+  nextRunAt?: string | null;
+  createdAt: string;
+  /** @nullable */
+  updatedAt?: string | null;
+}
+
+export type ScheduleInputFormat = typeof ScheduleInputFormat[keyof typeof ScheduleInputFormat];
+
+
+export const ScheduleInputFormat = {
+  mp4: 'mp4',
+  mp3: 'mp3',
+  webm: 'webm',
+  best: 'best',
+} as const;
+
+export interface ScheduleInput {
+  /** @minLength 1 */
+  label: string;
+  url: string;
+  format: ScheduleInputFormat;
+  quality?: string;
+  cronExpr: string;
+  enabled?: boolean;
+}
+
+export type ScheduleUpdateFormat = typeof ScheduleUpdateFormat[keyof typeof ScheduleUpdateFormat];
+
+
+export const ScheduleUpdateFormat = {
+  mp4: 'mp4',
+  mp3: 'mp3',
+  webm: 'webm',
+  best: 'best',
+} as const;
+
+export interface ScheduleUpdate {
+  label?: string;
+  url?: string;
+  format?: ScheduleUpdateFormat;
+  quality?: string;
+  cronExpr?: string;
+  enabled?: boolean;
+}
+
+export interface BatchDownloadInput {
+  items: DownloadInput[];
+}
+
+export interface ScheduleRunResponse {
+  dispatched: number;
+  jobs: Download[];
+}
+
 export type ListDownloadsParams = {
 status?: ListDownloadsStatus;
 format?: string;

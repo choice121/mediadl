@@ -5,22 +5,23 @@ import fs from "fs";
 import { db, downloadsTable } from "@workspace/db";
 import {
   CreateDownloadBody,
-  BatchCreateDownloadBody,
+  BatchCreateDownloadsBody,
   GetDownloadParams,
   DeleteDownloadParams,
   RetryDownloadParams,
   DownloadFileParams,
   ListDownloadsQueryParams,
 } from "@workspace/api-zod";
+import { z } from "zod/v4";
 import { logger } from "../lib/logger";
-import { runDownload, getMediaInfo, downloadsDir } from "../lib/downloader";
+import { runDownload, getMediaInfo, downloadsDir, enumeratePlaylistUrls, isChannelOrPlaylistUrl } from "../lib/downloader";
 
 const router: IRouter = Router();
 
 // In-memory active job tracking
 const activeJobs = new Set<number>();
 
-async function startDownloadJob(id: number) {
+export async function startDownloadJob(id: number): Promise<void> {
   if (activeJobs.has(id)) return;
   activeJobs.add(id);
 
@@ -99,7 +100,6 @@ router.get("/downloads", async (req, res): Promise<void> => {
   }
 
   const { status, format } = queryParsed.data;
-  let query = db.select().from(downloadsTable).$dynamic();
 
   const conditions = [];
   if (status) conditions.push(eq(downloadsTable.status, status));
@@ -122,13 +122,46 @@ router.post("/downloads", async (req, res): Promise<void> => {
 
   const { url, format, quality } = parsed.data;
 
+  // Auto-detect channel/playlist URLs and expand them
+  if (isChannelOrPlaylistUrl(url)) {
+    try {
+      const urls = await enumeratePlaylistUrls(url);
+      if (urls.length === 0) {
+        res.status(422).json({ error: "No videos found in the channel/playlist" });
+        return;
+      }
+
+      const created = await Promise.all(
+        urls.map((u) =>
+          db.insert(downloadsTable)
+            .values({ url: u, format, quality: quality ?? null, status: "pending", progress: 0 })
+            .returning()
+            .then(([row]) => row)
+        )
+      );
+
+      for (const dl of created) {
+        startDownloadJob(dl.id).catch((err) => {
+          logger.error({ id: dl.id, err }, "Unhandled error in channel download job");
+        });
+      }
+
+      req.log.info({ count: created.length, url }, "Channel/playlist expanded to individual jobs");
+      res.status(201).json(created);
+      return;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      res.status(422).json({ error: `Failed to expand channel/playlist: ${msg}` });
+      return;
+    }
+  }
+
   const [download] = await db.insert(downloadsTable)
     .values({ url, format, quality: quality ?? null, status: "pending", progress: 0 })
     .returning();
 
   req.log.info({ id: download.id, url, format }, "Download job created");
 
-  // Start async (don't await)
   startDownloadJob(download.id).catch((err) => {
     logger.error({ id: download.id, err }, "Unhandled error in download job");
   });
@@ -138,7 +171,7 @@ router.post("/downloads", async (req, res): Promise<void> => {
 
 // POST /downloads/batch
 router.post("/downloads/batch", async (req, res): Promise<void> => {
-  const parsed = BatchCreateDownloadBody.safeParse(req.body);
+  const parsed = BatchCreateDownloadsBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
@@ -213,7 +246,6 @@ router.delete("/downloads/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  // Delete file if exists
   if (download.filePath && fs.existsSync(download.filePath)) {
     try {
       fs.unlinkSync(download.filePath);
@@ -245,7 +277,6 @@ router.post("/downloads/:id/retry", async (req, res): Promise<void> => {
     .where(eq(downloadsTable.id, params.data.id))
     .returning();
 
-  // Start async
   startDownloadJob(updated.id).catch((err) => {
     logger.error({ id: updated.id, err }, "Unhandled error in retry job");
   });
@@ -273,9 +304,7 @@ router.get("/downloads/:id/file", async (req, res): Promise<void> => {
   }
 
   const rawFilename = path.basename(download.filePath);
-  // Strip characters that are illegal in HTTP header quoted-strings
   const safeFilename = rawFilename.replace(/[^\x20-\x7E]/g, "_").replace(/[\\"/]/g, "_");
-  // RFC 5987 encoded form preserves the full original name for browsers that support it
   const encodedFilename = encodeURIComponent(rawFilename);
   res.setHeader(
     "Content-Disposition",

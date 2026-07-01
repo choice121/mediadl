@@ -21,7 +21,13 @@ export interface DownloadProgress {
   duration?: string;
 }
 
-export function buildYtDlpArgs(url: string, format: string, quality: string | null | undefined, outputPath: string): string[] {
+export function buildYtDlpArgs(
+  url: string,
+  format: string,
+  quality: string | null | undefined,
+  outputPath: string,
+  isPlaylist = false,
+): string[] {
   const args: string[] = [];
 
   if (format === "mp3") {
@@ -35,8 +41,13 @@ export function buildYtDlpArgs(url: string, format: string, quality: string | nu
   } else if (format === "webm") {
     args.push("-f", "bestvideo[ext=webm]+bestaudio[ext=webm]/best[ext=webm]/best");
   } else {
-    // "best" format or unknown — use proper merge selector instead of deprecated "-f best"
     args.push("-f", "bestvideo+bestaudio/best");
+  }
+
+  if (isPlaylist) {
+    args.push("--yes-playlist");
+  } else {
+    args.push("--no-playlist");
   }
 
   args.push(
@@ -44,7 +55,6 @@ export function buildYtDlpArgs(url: string, format: string, quality: string | nu
     "--convert-thumbnails", "jpg",
     "--embed-thumbnail",
     "--add-metadata",
-    "--no-playlist",
     "--progress",
     "--newline",
     "-o", outputPath,
@@ -75,6 +85,51 @@ export function getYtDlpPath(): string {
   }
 
   return "yt-dlp";
+}
+
+/** Detect if a URL points to a channel or playlist (not a single video) */
+export function isChannelOrPlaylistUrl(url: string): boolean {
+  return (
+    url.includes("playlist?") ||
+    url.includes("/playlist/") ||
+    url.includes("/c/") ||
+    url.includes("/@") ||
+    url.includes("/channel/") ||
+    url.includes("/user/") ||
+    // YouTube Music playlists, Bandcamp artist pages, SoundCloud sets, etc.
+    (url.includes("list=") && !url.includes("watch?v="))
+  );
+}
+
+/** Enumerate all video URLs in a playlist or channel */
+export async function enumeratePlaylistUrls(url: string): Promise<string[]> {
+  return new Promise((resolve, reject) => {
+    const ytdlp = getYtDlpPath();
+    const proc = spawn(ytdlp, [
+      "--flat-playlist",
+      "--print", "url",
+      "--no-warnings",
+      url,
+    ]);
+
+    let stdout = "";
+    let stderr = "";
+    proc.stdout.on("data", (d) => (stdout += d));
+    proc.stderr.on("data", (d) => (stderr += d));
+
+    proc.on("close", (code) => {
+      if (code !== 0) {
+        logger.warn({ stderr, code }, "yt-dlp playlist enumeration failed");
+        reject(new Error(stderr || `yt-dlp exited with code ${code}`));
+        return;
+      }
+      const urls = stdout
+        .split("\n")
+        .map((u) => u.trim())
+        .filter((u) => u.length > 0 && u.startsWith("http"));
+      resolve(urls);
+    });
+  });
 }
 
 export async function getMediaInfo(url: string): Promise<{ title: string; thumbnail: string; duration: string } | null> {
@@ -126,13 +181,14 @@ export async function runDownload(
   url: string,
   format: string,
   quality: string | null | undefined,
-  onProgress: (p: DownloadProgress) => void
+  onProgress: (p: DownloadProgress) => void,
+  isPlaylist = false,
 ): Promise<{ filePath: string; fileSize: number }> {
   return new Promise((resolve, reject) => {
     const ytdlp = getYtDlpPath();
     const ext = format === "mp3" ? "mp3" : format === "webm" ? "webm" : "%(ext)s";
     const outputTemplate = path.join(downloadsDir, `${id}_%(title)s.${ext}`);
-    const args = buildYtDlpArgs(url, format, quality, outputTemplate);
+    const args = buildYtDlpArgs(url, format, quality, outputTemplate, isPlaylist);
 
     logger.info({ id, ytdlp, args }, "Starting yt-dlp download");
 
@@ -174,21 +230,18 @@ export async function runDownload(
         return;
       }
 
-      // Find the actual output file (prefer video/audio over thumbnail jpg)
       let finalPath = lastFilePath;
-      // If the last captured path is a thumbnail jpg, look for the actual media file
       if (finalPath && finalPath.endsWith('.jpg')) {
         const baseName = finalPath.replace(/\.jpg$/, '');
         const videoExts = ['.mp4', '.webm', '.mkv', '.m4a', '.mp3', '.opus'];
-        for (const ext of videoExts) {
-          if (fs.existsSync(baseName + ext)) {
-            finalPath = baseName + ext;
+        for (const vext of videoExts) {
+          if (fs.existsSync(baseName + vext)) {
+            finalPath = baseName + vext;
             break;
           }
         }
       }
       if (!finalPath || !fs.existsSync(finalPath)) {
-        // Search downloads dir for file matching id_, prefer non-jpg
         const allFiles = fs.readdirSync(downloadsDir).filter(f => f.startsWith(`${id}_`));
         const mediaFiles = allFiles.filter(f => !f.endsWith('.jpg') && !f.endsWith('.png') && !f.endsWith('.webp'));
         const files = mediaFiles.length > 0 ? mediaFiles : allFiles;

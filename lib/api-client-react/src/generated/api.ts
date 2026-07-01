@@ -20,11 +20,16 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  BatchDownloadInput,
   ClearCompletedResponse,
   Download,
   DownloadInput,
   HealthStatus,
   ListDownloadsParams,
+  Schedule,
+  ScheduleInput,
+  ScheduleRunResponse,
+  ScheduleUpdate,
   Stats
 } from './api.schemas';
 
@@ -226,11 +231,11 @@ export const getCreateDownloadUrl = () => {
 }
 
 /**
- * @summary Create a new download job
+ * @summary Create a new download job (auto-expands channel/playlist URLs)
  */
-export const createDownload = async (downloadInput: DownloadInput, options?: RequestInit): Promise<Download> => {
+export const createDownload = async (downloadInput: DownloadInput, options?: RequestInit): Promise<Download | Download[]> => {
 
-  return customFetch<Download>(getCreateDownloadUrl(),
+  return customFetch<Download | Download[]>(getCreateDownloadUrl(),
   {
     ...options,
     method: 'POST',
@@ -274,7 +279,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreateDownloadMutationError = ErrorType<void>
 
     /**
- * @summary Create a new download job
+ * @summary Create a new download job (auto-expands channel/playlist URLs)
  */
 export const useCreateDownload = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDownload>>, TError,{data: BodyType<DownloadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -285,6 +290,76 @@ export const useCreateDownload = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCreateDownloadMutationOptions(options));
+    }
+
+export const getBatchCreateDownloadsUrl = () => {
+
+
+
+
+  return `/api/downloads/batch`
+}
+
+/**
+ * @summary Create multiple download jobs at once
+ */
+export const batchCreateDownloads = async (batchDownloadInput: BatchDownloadInput, options?: RequestInit): Promise<Download[]> => {
+
+  return customFetch<Download[]>(getBatchCreateDownloadsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(batchDownloadInput)
+  }
+);}
+
+
+
+
+export const getBatchCreateDownloadsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof batchCreateDownloads>>, TError,{data: BodyType<BatchDownloadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof batchCreateDownloads>>, TError,{data: BodyType<BatchDownloadInput>}, TContext> => {
+
+const mutationKey = ['batchCreateDownloads'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof batchCreateDownloads>>, {data: BodyType<BatchDownloadInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  batchCreateDownloads(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BatchCreateDownloadsMutationResult = NonNullable<Awaited<ReturnType<typeof batchCreateDownloads>>>
+    export type BatchCreateDownloadsMutationBody = BodyType<BatchDownloadInput>
+    export type BatchCreateDownloadsMutationError = ErrorType<void>
+
+    /**
+ * @summary Create multiple download jobs at once
+ */
+export const useBatchCreateDownloads = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof batchCreateDownloads>>, TError,{data: BodyType<BatchDownloadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof batchCreateDownloads>>,
+        TError,
+        {data: BodyType<BatchDownloadInput>},
+        TContext
+      > => {
+      return useMutation(getBatchCreateDownloadsMutationOptions(options));
     }
 
 export const getGetDownloadUrl = (id: number,) => {
@@ -433,46 +508,6 @@ export const useDeleteDownload = <TError = ErrorType<void>,
       > => {
       return useMutation(getDeleteDownloadMutationOptions(options));
     }
-
-export const getBatchCreateDownloadsUrl = () => {
-  return `/api/downloads/batch`
-}
-
-export const batchCreateDownloads = async (body: { items: Array<{ url: string; format: 'mp4' | 'mp3' | 'webm' | 'best'; quality?: string }> }, options?: RequestInit): Promise<Download[]> => {
-  return customFetch<Download[]>(getBatchCreateDownloadsUrl(), {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(body)
-  });
-}
-
-export const getBatchCreateDownloadsMutationOptions = <TError = ErrorType<void>, TContext = unknown>(
-  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof batchCreateDownloads>>, TError, { data: { items: Array<{ url: string; format: 'mp4' | 'mp3' | 'webm' | 'best'; quality?: string }> } }, TContext>, request?: SecondParameter<typeof customFetch> }
-): UseMutationOptions<Awaited<ReturnType<typeof batchCreateDownloads>>, TError, { data: { items: Array<{ url: string; format: 'mp4' | 'mp3' | 'webm' | 'best'; quality?: string }> } }, TContext> => {
-  const mutationKey = ['batchCreateDownloads'];
-  const { mutation: mutationOptions, request: requestOptions } = options ?
-    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<Awaited<ReturnType<typeof batchCreateDownloads>>, { data: { items: Array<{ url: string; format: 'mp4' | 'mp3' | 'webm' | 'best'; quality?: string }> } }> = (props) => {
-    const { data } = props ?? {};
-    return batchCreateDownloads(data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-}
-
-export type BatchCreateDownloadsMutationResult = NonNullable<Awaited<ReturnType<typeof batchCreateDownloads>>>
-export type BatchCreateDownloadsMutationError = ErrorType<void>
-
-export const useBatchCreateDownloads = <TError = ErrorType<void>, TContext = unknown>(
-  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof batchCreateDownloads>>, TError, { data: { items: Array<{ url: string; format: 'mp4' | 'mp3' | 'webm' | 'best'; quality?: string }> } }, TContext>, request?: SecondParameter<typeof customFetch> }
-): UseMutationResult<Awaited<ReturnType<typeof batchCreateDownloads>>, TError, { data: { items: Array<{ url: string; format: 'mp4' | 'mp3' | 'webm' | 'best'; quality?: string }> } }, TContext> => {
-  return useMutation(getBatchCreateDownloadsMutationOptions(options));
-}
 
 export const getClearCompletedUrl = () => {
 
@@ -844,4 +879,439 @@ export function useGetRecent<TData = Awaited<ReturnType<typeof getRecent>>, TErr
 
 
 
+
+export const getListSchedulesUrl = () => {
+
+
+
+
+  return `/api/schedules`
+}
+
+/**
+ * @summary List all scheduled downloads
+ */
+export const listSchedules = async ( options?: RequestInit): Promise<Schedule[]> => {
+
+  return customFetch<Schedule[]>(getListSchedulesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSchedulesQueryKey = () => {
+    return [
+    `/api/schedules`
+    ] as const;
+    }
+
+
+export const getListSchedulesQueryOptions = <TData = Awaited<ReturnType<typeof listSchedules>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSchedules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSchedulesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSchedules>>> = ({ signal }) => listSchedules({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSchedules>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSchedulesQueryResult = NonNullable<Awaited<ReturnType<typeof listSchedules>>>
+export type ListSchedulesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all scheduled downloads
+ */
+
+export function useListSchedules<TData = Awaited<ReturnType<typeof listSchedules>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSchedules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSchedulesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateScheduleUrl = () => {
+
+
+
+
+  return `/api/schedules`
+}
+
+/**
+ * @summary Create a new scheduled download
+ */
+export const createSchedule = async (scheduleInput: ScheduleInput, options?: RequestInit): Promise<Schedule> => {
+
+  return customFetch<Schedule>(getCreateScheduleUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(scheduleInput)
+  }
+);}
+
+
+
+
+export const getCreateScheduleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSchedule>>, TError,{data: BodyType<ScheduleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSchedule>>, TError,{data: BodyType<ScheduleInput>}, TContext> => {
+
+const mutationKey = ['createSchedule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSchedule>>, {data: BodyType<ScheduleInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSchedule(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateScheduleMutationResult = NonNullable<Awaited<ReturnType<typeof createSchedule>>>
+    export type CreateScheduleMutationBody = BodyType<ScheduleInput>
+    export type CreateScheduleMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a new scheduled download
+ */
+export const useCreateSchedule = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSchedule>>, TError,{data: BodyType<ScheduleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSchedule>>,
+        TError,
+        {data: BodyType<ScheduleInput>},
+        TContext
+      > => {
+      return useMutation(getCreateScheduleMutationOptions(options));
+    }
+
+export const getGetScheduleUrl = (id: number,) => {
+
+
+
+
+  return `/api/schedules/${id}`
+}
+
+/**
+ * @summary Get a schedule by ID
+ */
+export const getSchedule = async (id: number, options?: RequestInit): Promise<Schedule> => {
+
+  return customFetch<Schedule>(getGetScheduleUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetScheduleQueryKey = (id: number,) => {
+    return [
+    `/api/schedules/${id}`
+    ] as const;
+    }
+
+
+export const getGetScheduleQueryOptions = <TData = Awaited<ReturnType<typeof getSchedule>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSchedule>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetScheduleQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSchedule>>> = ({ signal }) => getSchedule(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSchedule>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetScheduleQueryResult = NonNullable<Awaited<ReturnType<typeof getSchedule>>>
+export type GetScheduleQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get a schedule by ID
+ */
+
+export function useGetSchedule<TData = Awaited<ReturnType<typeof getSchedule>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSchedule>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetScheduleQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateScheduleUrl = (id: number,) => {
+
+
+
+
+  return `/api/schedules/${id}`
+}
+
+/**
+ * @summary Update a schedule
+ */
+export const updateSchedule = async (id: number,
+    scheduleUpdate: ScheduleUpdate, options?: RequestInit): Promise<Schedule> => {
+
+  return customFetch<Schedule>(getUpdateScheduleUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(scheduleUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateScheduleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSchedule>>, TError,{id: number;data: BodyType<ScheduleUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSchedule>>, TError,{id: number;data: BodyType<ScheduleUpdate>}, TContext> => {
+
+const mutationKey = ['updateSchedule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSchedule>>, {id: number;data: BodyType<ScheduleUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSchedule(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateScheduleMutationResult = NonNullable<Awaited<ReturnType<typeof updateSchedule>>>
+    export type UpdateScheduleMutationBody = BodyType<ScheduleUpdate>
+    export type UpdateScheduleMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a schedule
+ */
+export const useUpdateSchedule = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSchedule>>, TError,{id: number;data: BodyType<ScheduleUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSchedule>>,
+        TError,
+        {id: number;data: BodyType<ScheduleUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateScheduleMutationOptions(options));
+    }
+
+export const getDeleteScheduleUrl = (id: number,) => {
+
+
+
+
+  return `/api/schedules/${id}`
+}
+
+/**
+ * @summary Delete a schedule
+ */
+export const deleteSchedule = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteScheduleUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteScheduleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSchedule>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSchedule>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteSchedule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSchedule>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteSchedule(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteScheduleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSchedule>>>
+
+    export type DeleteScheduleMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a schedule
+ */
+export const useDeleteSchedule = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSchedule>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSchedule>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteScheduleMutationOptions(options));
+    }
+
+export const getRunScheduleNowUrl = (id: number,) => {
+
+
+
+
+  return `/api/schedules/${id}/run`
+}
+
+/**
+ * @summary Run a scheduled download immediately
+ */
+export const runScheduleNow = async (id: number, options?: RequestInit): Promise<ScheduleRunResponse> => {
+
+  return customFetch<ScheduleRunResponse>(getRunScheduleNowUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRunScheduleNowMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runScheduleNow>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runScheduleNow>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['runScheduleNow'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runScheduleNow>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  runScheduleNow(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunScheduleNowMutationResult = NonNullable<Awaited<ReturnType<typeof runScheduleNow>>>
+
+    export type RunScheduleNowMutationError = ErrorType<void>
+
+    /**
+ * @summary Run a scheduled download immediately
+ */
+export const useRunScheduleNow = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runScheduleNow>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runScheduleNow>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRunScheduleNowMutationOptions(options));
+    }
 

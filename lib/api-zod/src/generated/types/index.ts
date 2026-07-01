@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './batchDownloadInput';
 export * from './clearCompletedResponse';
 export * from './download';
 export * from './downloadFormat';
@@ -15,4 +16,11 @@ export * from './downloadStatus';
 export * from './healthStatus';
 export * from './listDownloadsParams';
 export * from './listDownloadsStatus';
+export * from './schedule';
+export * from './scheduleFormat';
+export * from './scheduleInput';
+export * from './scheduleInputFormat';
+export * from './scheduleRunResponse';
+export * from './scheduleUpdate';
+export * from './scheduleUpdateFormat';
 export * from './stats';

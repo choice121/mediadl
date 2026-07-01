@@ -45,7 +45,7 @@ export const ListDownloadsResponse = zod.array(ListDownloadsResponseItem)
 
 
 /**
- * @summary Create a new download job
+ * @summary Create a new download job (auto-expands channel/playlist URLs)
  */
 
 
@@ -56,7 +56,54 @@ export const CreateDownloadBody = zod.object({
   "quality": zod.string().optional()
 })
 
-export const CreateDownloadResponse = zod.object({
+export const CreateDownloadResponse = zod.union([zod.object({
+  "id": zod.number(),
+  "url": zod.string(),
+  "title": zod.string().nullable(),
+  "thumbnail": zod.string().nullish(),
+  "status": zod.enum(['pending', 'downloading', 'completed', 'failed']),
+  "format": zod.enum(['mp4', 'mp3', 'webm', 'best']),
+  "quality": zod.string().nullish(),
+  "fileSize": zod.number().nullish(),
+  "filePath": zod.string().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "progress": zod.number().nullish(),
+  "duration": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
+}),zod.array(zod.object({
+  "id": zod.number(),
+  "url": zod.string(),
+  "title": zod.string().nullable(),
+  "thumbnail": zod.string().nullish(),
+  "status": zod.enum(['pending', 'downloading', 'completed', 'failed']),
+  "format": zod.enum(['mp4', 'mp3', 'webm', 'best']),
+  "quality": zod.string().nullish(),
+  "fileSize": zod.number().nullish(),
+  "filePath": zod.string().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "progress": zod.number().nullish(),
+  "duration": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
+}))])
+
+
+/**
+ * @summary Create multiple download jobs at once
+ */
+
+
+
+export const BatchCreateDownloadsBody = zod.object({
+  "items": zod.array(zod.object({
+  "url": zod.string().min(1),
+  "format": zod.enum(['mp4', 'mp3', 'webm', 'best']),
+  "quality": zod.string().optional()
+}))
+})
+
+export const BatchCreateDownloadsResponseItem = zod.object({
   "id": zod.number(),
   "url": zod.string(),
   "title": zod.string().nullable(),
@@ -72,6 +119,7 @@ export const CreateDownloadResponse = zod.object({
   "createdAt": zod.string(),
   "updatedAt": zod.string().nullish()
 })
+export const BatchCreateDownloadsResponse = zod.array(BatchCreateDownloadsResponseItem)
 
 
 /**
@@ -153,35 +201,6 @@ export const DownloadFileResponse = zod.unknown()
 
 
 /**
- * @summary Batch create download jobs
- */
-export const BatchCreateDownloadBody = zod.object({
-  "items": zod.array(zod.object({
-    "url": zod.string().min(1),
-    "format": zod.enum(['mp4', 'mp3', 'webm', 'best']),
-    "quality": zod.string().optional()
-  })).min(1)
-})
-
-export const BatchCreateDownloadResponse = zod.array(zod.object({
-  "id": zod.number(),
-  "url": zod.string(),
-  "title": zod.string().nullable(),
-  "thumbnail": zod.string().nullish(),
-  "status": zod.enum(['pending', 'downloading', 'completed', 'failed']),
-  "format": zod.enum(['mp4', 'mp3', 'webm', 'best']),
-  "quality": zod.string().nullish(),
-  "fileSize": zod.number().nullish(),
-  "filePath": zod.string().nullish(),
-  "errorMessage": zod.string().nullish(),
-  "progress": zod.number().nullish(),
-  "duration": zod.string().nullish(),
-  "createdAt": zod.string(),
-  "updatedAt": zod.string().nullish()
-}))
-
-
-/**
  * @summary Get download queue statistics
  */
 export const GetStatsResponse = zod.object({
@@ -214,5 +233,145 @@ export const GetRecentResponseItem = zod.object({
   "updatedAt": zod.string().nullish()
 })
 export const GetRecentResponse = zod.array(GetRecentResponseItem)
+
+
+/**
+ * @summary List all scheduled downloads
+ */
+export const ListSchedulesResponseItem = zod.object({
+  "id": zod.number(),
+  "label": zod.string(),
+  "url": zod.string(),
+  "format": zod.enum(['mp4', 'mp3', 'webm', 'best']),
+  "quality": zod.string().nullish(),
+  "cronExpr": zod.string(),
+  "enabled": zod.boolean(),
+  "lastRunAt": zod.string().nullish(),
+  "nextRunAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
+})
+export const ListSchedulesResponse = zod.array(ListSchedulesResponseItem)
+
+
+/**
+ * @summary Create a new scheduled download
+ */
+
+
+
+export const CreateScheduleBody = zod.object({
+  "label": zod.string().min(1),
+  "url": zod.string(),
+  "format": zod.enum(['mp4', 'mp3', 'webm', 'best']),
+  "quality": zod.string().optional(),
+  "cronExpr": zod.string(),
+  "enabled": zod.boolean().optional()
+})
+
+export const CreateScheduleResponse = zod.object({
+  "id": zod.number(),
+  "label": zod.string(),
+  "url": zod.string(),
+  "format": zod.enum(['mp4', 'mp3', 'webm', 'best']),
+  "quality": zod.string().nullish(),
+  "cronExpr": zod.string(),
+  "enabled": zod.boolean(),
+  "lastRunAt": zod.string().nullish(),
+  "nextRunAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Get a schedule by ID
+ */
+export const GetScheduleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetScheduleResponse = zod.object({
+  "id": zod.number(),
+  "label": zod.string(),
+  "url": zod.string(),
+  "format": zod.enum(['mp4', 'mp3', 'webm', 'best']),
+  "quality": zod.string().nullish(),
+  "cronExpr": zod.string(),
+  "enabled": zod.boolean(),
+  "lastRunAt": zod.string().nullish(),
+  "nextRunAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update a schedule
+ */
+export const UpdateScheduleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateScheduleBody = zod.object({
+  "label": zod.string().optional(),
+  "url": zod.string().optional(),
+  "format": zod.enum(['mp4', 'mp3', 'webm', 'best']).optional(),
+  "quality": zod.string().optional(),
+  "cronExpr": zod.string().optional(),
+  "enabled": zod.boolean().optional()
+})
+
+export const UpdateScheduleResponse = zod.object({
+  "id": zod.number(),
+  "label": zod.string(),
+  "url": zod.string(),
+  "format": zod.enum(['mp4', 'mp3', 'webm', 'best']),
+  "quality": zod.string().nullish(),
+  "cronExpr": zod.string(),
+  "enabled": zod.boolean(),
+  "lastRunAt": zod.string().nullish(),
+  "nextRunAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Delete a schedule
+ */
+export const DeleteScheduleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteScheduleResponse = zod.void()
+
+
+/**
+ * @summary Run a scheduled download immediately
+ */
+export const RunScheduleNowParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RunScheduleNowResponse = zod.object({
+  "dispatched": zod.number(),
+  "jobs": zod.array(zod.object({
+  "id": zod.number(),
+  "url": zod.string(),
+  "title": zod.string().nullable(),
+  "thumbnail": zod.string().nullish(),
+  "status": zod.enum(['pending', 'downloading', 'completed', 'failed']),
+  "format": zod.enum(['mp4', 'mp3', 'webm', 'best']),
+  "quality": zod.string().nullish(),
+  "fileSize": zod.number().nullish(),
+  "filePath": zod.string().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "progress": zod.number().nullish(),
+  "duration": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().nullish()
+}))
+})
 
 

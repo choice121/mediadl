@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, ListVideo, History, Activity } from "lucide-react";
+import { LayoutDashboard, ListVideo, History, Activity, Clock } from "lucide-react";
 import { useGetStats } from "@workspace/api-client-react";
 
 interface LayoutProps {
@@ -15,6 +15,7 @@ export default function Layout({ children }: LayoutProps) {
     { href: "/", label: "Download", icon: LayoutDashboard },
     { href: "/queue", label: "Queue", icon: ListVideo },
     { href: "/history", label: "History", icon: History },
+    { href: "/schedules", label: "Schedules", icon: Clock },
   ];
 
   return (

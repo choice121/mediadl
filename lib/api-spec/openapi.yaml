@@ -14,6 +14,8 @@ tags:
     description: Download job operations
   - name: queue
     description: Queue and stats operations
+  - name: schedules
+    description: Scheduled download operations
 paths:
   /healthz:
     get:
@@ -58,7 +60,7 @@ paths:
     post:
       operationId: createDownload
       tags: [downloads]
-      summary: Create a new download job
+      summary: Create a new download job (auto-expands channel/playlist URLs)
       requestBody:
         required: true
         content:
@@ -67,11 +69,40 @@ paths:
               $ref: "#/components/schemas/DownloadInput"
       responses:
         "201":
-          description: Download job created
+          description: Download job(s) created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Download"
+                oneOf:
+                  - $ref: "#/components/schemas/Download"
+                  - type: array
+                    items:
+                      $ref: "#/components/schemas/Download"
+        "400":
+          description: Invalid request
+        "422":
+          description: Could not expand channel/playlist
+
+  /downloads/batch:
+    post:
+      operationId: batchCreateDownloads
+      tags: [downloads]
+      summary: Create multiple download jobs at once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchDownloadInput"
+      responses:
+        "201":
+          description: Download jobs created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Download"
         "400":
           description: Invalid request
 
@@ -190,6 +221,122 @@ paths:
                 items:
                   $ref: "#/components/schemas/Download"
 
+  /schedules:
+    get:
+      operationId: listSchedules
+      tags: [schedules]
+      summary: List all scheduled downloads
+      responses:
+        "200":
+          description: List of schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Schedule"
+    post:
+      operationId: createSchedule
+      tags: [schedules]
+      summary: Create a new scheduled download
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleInput"
+      responses:
+        "201":
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+        "400":
+          description: Invalid request
+
+  /schedules/{id}:
+    get:
+      operationId: getSchedule
+      tags: [schedules]
+      summary: Get a schedule by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Schedule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+        "404":
+          description: Not found
+    put:
+      operationId: updateSchedule
+      tags: [schedules]
+      summary: Update a schedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleUpdate"
+      responses:
+        "200":
+          description: Updated schedule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteSchedule
+      tags: [schedules]
+      summary: Delete a schedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /schedules/{id}/run:
+    post:
+      operationId: runScheduleNow
+      tags: [schedules]
+      summary: Run a scheduled download immediately
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Jobs dispatched
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleRunResponse"
+        "404":
+          description: Not found
+
 components:
   schemas:
     HealthStatus:
@@ -286,3 +433,101 @@ components:
           type: integer
         totalSizeBytes:
           type: integer
+
+    Schedule:
+      type: object
+      required:
+        - id
+        - label
+        - url
+        - format
+        - cronExpr
+        - enabled
+        - createdAt
+      properties:
+        id:
+          type: integer
+        label:
+          type: string
+        url:
+          type: string
+        format:
+          type: string
+          enum: [mp4, mp3, webm, best]
+        quality:
+          type: ["string", "null"]
+        cronExpr:
+          type: string
+        enabled:
+          type: boolean
+        lastRunAt:
+          type: ["string", "null"]
+        nextRunAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: ["string", "null"]
+
+    ScheduleInput:
+      type: object
+      required:
+        - label
+        - url
+        - format
+        - cronExpr
+      properties:
+        label:
+          type: string
+          minLength: 1
+        url:
+          type: string
+        format:
+          type: string
+          enum: [mp4, mp3, webm, best]
+        quality:
+          type: string
+        cronExpr:
+          type: string
+        enabled:
+          type: boolean
+
+    ScheduleUpdate:
+      type: object
+      properties:
+        label:
+          type: string
+        url:
+          type: string
+        format:
+          type: string
+          enum: [mp4, mp3, webm, best]
+        quality:
+          type: string
+        cronExpr:
+          type: string
+        enabled:
+          type: boolean
+
+    BatchDownloadInput:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DownloadInput"
+
+    ScheduleRunResponse:
+      type: object
+      required:
+        - dispatched
+        - jobs
+      properties:
+        dispatched:
+          type: integer
+        jobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Download"
