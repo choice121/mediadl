@@ -1,0 +1,1 @@
+- [mediadl-stack](mediadl-stack.md) — project layout, auth, scheduler, channel-download patterns for this codebase
