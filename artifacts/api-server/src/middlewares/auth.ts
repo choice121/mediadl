@@ -22,8 +22,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     return;
   }
 
-  const session = req.session as Record<string, unknown>;
-  if (session.authenticated === true) {
+  if (req.session.authenticated === true) {
     next();
     return;
   }

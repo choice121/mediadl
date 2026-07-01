@@ -7,14 +7,52 @@ import { enumeratePlaylistUrls, isChannelOrPlaylistUrl } from "./downloader";
 // Keep a map of active cron tasks keyed by schedule ID
 const activeTasks = new Map<number, cron.ScheduledTask>();
 
-/** Compute the next run time for a cron expression (approximate: next minute boundary) */
+/** Compute the next run time for a cron expression.
+ *  node-cron doesn't expose a next-run API, so we use a minimal field parser
+ *  to advance minute-by-minute from now until the expression matches.
+ */
 function computeNextRun(cronExpr: string): Date | null {
   try {
-    // node-cron doesn't expose a "next run" API directly; we approximate it
-    // by creating a temporary task and getting the next execution
-    const now = new Date();
-    const next = new Date(now.getTime() + 60_000);
-    return next;
+    if (!cron.validate(cronExpr)) return null;
+
+    const parts = cronExpr.trim().split(/\s+/);
+    if (parts.length < 5) return null;
+    const [minute, hour, dom, month, dow] = parts;
+
+    const matches = (value: number, field: string): boolean => {
+      if (field === "*") return true;
+      return field.split(",").some((part) => {
+        if (part.includes("/")) {
+          const [start, step] = part.split("/").map(Number);
+          return (value - (isNaN(start) ? 0 : start)) % step === 0 && value >= (isNaN(start) ? 0 : start);
+        }
+        if (part.includes("-")) {
+          const [lo, hi] = part.split("-").map(Number);
+          return value >= lo && value <= hi;
+        }
+        return parseInt(part, 10) === value;
+      });
+    };
+
+    const candidate = new Date();
+    candidate.setSeconds(0, 0);
+    candidate.setMinutes(candidate.getMinutes() + 1); // start at next full minute
+
+    // Search within the next 8 days (enough to cover any valid cron)
+    const limit = new Date(candidate.getTime() + 8 * 24 * 60 * 60 * 1000);
+    while (candidate < limit) {
+      if (
+        matches(candidate.getMinutes(), minute) &&
+        matches(candidate.getHours(), hour) &&
+        matches(candidate.getDate(), dom) &&
+        matches(candidate.getMonth() + 1, month) &&
+        matches(candidate.getDay(), dow)
+      ) {
+        return new Date(candidate);
+      }
+      candidate.setMinutes(candidate.getMinutes() + 1);
+    }
+    return null;
   } catch {
     return null;
   }

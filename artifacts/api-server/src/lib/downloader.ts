@@ -107,7 +107,7 @@ export async function enumeratePlaylistUrls(url: string): Promise<string[]> {
     const ytdlp = getYtDlpPath();
     const proc = spawn(ytdlp, [
       "--flat-playlist",
-      "--print", "url",
+      "--print", "webpage_url",
       "--no-warnings",
       url,
     ]);
@@ -126,7 +126,7 @@ export async function enumeratePlaylistUrls(url: string): Promise<string[]> {
       const urls = stdout
         .split("\n")
         .map((u) => u.trim())
-        .filter((u) => u.length > 0 && u.startsWith("http"));
+        .filter((u) => u.startsWith("https://") || u.startsWith("http://"));
       resolve(urls);
     });
   });
